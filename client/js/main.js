@@ -8,7 +8,7 @@ initButton.onclick = onInitButtonClick;
 connectButton.onclick = onConnectButtonClick;
 
 
-let gotLocalMedia = false;
+let gotLocalMedia = true;
 let websocketConnected = false;
 
 //指video标签
@@ -20,7 +20,7 @@ const userMediaConstraint = {
     video: true,
 };
 
-const iceServers = [{urls: 'stun:stun.services.mozilla.com'}];
+const iceServers = [{urls: 'stun:stun.server.com:3478'}];
 const offerOptions = {
     offerToReceiveVideo: 1,
     offerToReceiveAudio: 1,
@@ -51,10 +51,15 @@ function onInitButtonClick() {
             }
             peerConnection = new RTCPeerConnection({iceServers:iceServers});
             //本地浏览器触发
-            peerConnection.icecandidate = onIceCandidate;
-            peerConnection.iceconnectionstatechange = onIceConnectionStateChange;
+            peerConnection.onicecandidate = onIceCandidate;
+            peerConnection.oniceconnectionstatechange = onIceConnectionStateChange;
             //收到对端的流媒体
-            peerConnection.onaddstream = onRemoteMedia;
+            //peerConnection.onaddstream = onRemoteMedia;
+            peerConnection.ontrack = onRemoteMedia;
+            for (let i=0; i<localVideoTracks.length; i++) {
+                console.log('addTrack:', localVideoTracks[i]);
+                peerConnection.addTrack(localVideoTracks[i]);
+            }
         })
         .catch((error) => {
             console.error('获取本地媒体设备失败:', error);
@@ -65,7 +70,6 @@ function onInitButtonClick() {
 function onConnectButtonClick() {
     connectButton.disabled = true;
     stopButton.disabled = false;
-    
     const sdp = peerConnection.createOffer(offerOptions)
         .then((sdp) => {
             console.log('创建本地spd:', sdp);
@@ -125,9 +129,18 @@ function initWebSocket() {
     }
 }
 
+let inboundStream;
 function onRemoteMedia(event) {
-    console.log('收到对端流媒体');
-    remoteVideo.srcObject = event.stream;
+    console.log('收到对端流媒体',event);
+    if (event.streams && event.streams[0]) {
+        remoteVideo.srcObject = ev.streams[0];
+    } else {
+        if (!inboundStream) {
+            inboundStream = new MediaStream();
+            remoteVideo.srcObject = inboundStream;
+        }
+        inboundStream.addTrack(event.track);
+    }
 }
 
 function dispatchSignalMessage(msg) {
@@ -164,12 +177,14 @@ function dispatchSignalMessage(msg) {
         case 'icecandidate':
             let icecandidate = obj['icecandidate'];
             console.log('收到对端icecandidate:', icecandidate);
-            try {
-                peerConnection.addIceCandidate(icecandidate);
-            console.log('添加对端icecandidate成功');
-            } catch (error) {
-                console.log('添加对端icecandidate失败:', error);
-            }
+            peerConnection.addIceCandidate(icecandidate)
+            .then(() => {
+                console.log('添加对端icecandidate成功');
+            })
+            .catch((error) => {
+                console.error('添加对端icecandidate失败',error);
+            })
+
             break;
         case 'answer':
             let answer = obj['answer'];
