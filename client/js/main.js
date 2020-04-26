@@ -4,6 +4,9 @@ const stopButton = document.getElementById('stop');
 initButton.disabled = false;
 connectButton.disabled = true;
 stopButton.disabled = true;
+initButton.onclick = onInitButtonClick;
+connectButton.onclick = onConnectButtonClick;
+
 
 let gotLocalMedia = false;
 let websocketConnected = false;
@@ -14,8 +17,7 @@ const remoteVideo = document.getElementById('remoteVideo');
 //指媒体本身
 let localMedia;
 const userMediaConstraint = {
-    'video': true,
-    'autio': false,
+    video: true,
 };
 
 const iceServers = [{urls: 'stun:stun1.xxx.com'}];
@@ -31,8 +33,10 @@ function onInitButtonClick() {
     initButton.disabled = true;
     initWebSocket();
     navigator.mediaDevices.getUserMedia(userMediaConstraint)
-        .then((localMedia) => {
-            localVideo.srcObject = localMedia;
+        .then((lm) => {
+            console.log('已获得本地媒体设备');
+            localVideo.srcObject = lm;
+            localMedia = lm;
             gotLocalMedia = true;
             if (gotLocalMedia && websocketConnected) {
                 connectButton.disabled = false;
@@ -89,7 +93,7 @@ function onIceConnectionStateChange(event) {
 }
 
 function initWebSocket() {
-    signalWebSocket = new WebSocket('ws://signaling.server.com');
+    signalWebSocket = new WebSocket('ws://127.0.0.1:9877/signaling');
     signalWebSocket.onopen = function() {
         websocketConnected = true;
         if (websocketConnected && gotLocalMedia) {

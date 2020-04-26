@@ -9,7 +9,11 @@ import (
 )
 
 var (
-	upgrader = websocket.Upgrader{}
+	upgrader = websocket.Upgrader{
+		CheckOrigin: func(r *http.Request) bool {
+			return true
+		},
+	}
 	sessions = make(map[string]*websocket.Conn)
 	mtx      = sync.Mutex{}
 )
@@ -24,6 +28,7 @@ func signaling(w http.ResponseWriter, r *http.Request) {
 	mtx.Lock()
 	sessions[c.RemoteAddr().String()] = c
 	mtx.Unlock()
+	fmt.Println("accepted new client:", c.RemoteAddr().String())
 	for {
 		t, msg, err := c.ReadMessage()
 		if err != nil {
