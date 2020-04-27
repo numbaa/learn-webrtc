@@ -18,6 +18,7 @@ const remoteVideo = document.getElementById('remoteVideo');
 let localMedia;
 const userMediaConstraint = {
     video: true,
+    audio: true
 };
 
 const iceServers = [{urls: 'stun:stun.server.com:3478'}];
@@ -33,10 +34,9 @@ function onInitButtonClick() {
     initButton.disabled = true;
     initWebSocket();
     navigator.mediaDevices.getUserMedia(userMediaConstraint)
-        .then((lm) => {
+        .then((localMedia) => {
             console.log('已获得本地媒体设备');
-            localVideo.srcObject = lm;
-            localMedia = lm;
+            localVideo.srcObject = localMedia;
             gotLocalMedia = true;
             if (gotLocalMedia && websocketConnected) {
                 connectButton.disabled = false;
@@ -56,9 +56,9 @@ function onInitButtonClick() {
             //收到对端的流媒体
             //peerConnection.onaddstream = onRemoteMedia;
             peerConnection.ontrack = onRemoteMedia;
-            for (let i=0; i<localVideoTracks.length; i++) {
-                console.log('addTrack:', localVideoTracks[i]);
-                peerConnection.addTrack(localVideoTracks[i]);
+            for (let track of localMedia.getTracks()) {
+                console.log('addTrack:', track);
+                peerConnection.addTrack(track);
             }
         })
         .catch((error) => {

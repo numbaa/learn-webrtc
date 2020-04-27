@@ -105,3 +105,6 @@ dist
 
 # Executable
 *.exe
+
+server.crt
+server.key
